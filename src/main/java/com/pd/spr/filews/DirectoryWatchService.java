@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static java.nio.file.StandardWatchEventKinds.*;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
 
@@ -28,7 +29,8 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
         watchService = FileSystems.getDefault().newWatchService();
         keyPathMap = Arrays.stream(subDirs)
                 .map(base::resolve)
-                .collect(toMap(d -> createModifyKey(d, watchService), d -> d));
+                .collect(toMap(d -> createModifyKey(d, watchService), identity()));
+        keyPathMap.put(createModifyKey(base, watchService), base);
     }
 
     private static WatchKey createModifyKey(Path p, WatchService ws) {

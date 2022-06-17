@@ -4,7 +4,6 @@ package com.pd.spr.filews;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,6 +16,7 @@ public class DWSTest {
     @BeforeAll
     static void initTmpDir() throws IOException {
         tmpDir = Files.createTempDirectory(Path.of(System.getProperty("user.home")), "tmp");
+        tmpDir.toFile().deleteOnExit();
     }
 
     @Test
@@ -25,7 +25,12 @@ public class DWSTest {
         System.out.println("Started");
         long msecs = 60_000;
         var f = tmpDir.resolve("demo.xml");
+        System.out.printf("File %s to be created%n", f);
         Files.createFile(f);
+        System.out.printf("File %s created%n", f);
+        if(!f.toFile().delete()) {
+            System.err.printf("File %s could not be deleted%n", f);
+        }
         Thread.sleep(msecs);
         System.out.printf("Ende nach %d msec%n", msecs);
     }
