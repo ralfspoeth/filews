@@ -14,7 +14,8 @@ import static java.util.stream.Collectors.toMap;
 
 public class DirectoryWatchService implements Runnable, AutoCloseable {
 
-    public record PathEvent(Path dir, WatchEvent<Path> event){}
+    public record PathEvent(Path dir, WatchEvent<Path> event) {
+    }
 
     public static final Predicate<WatchEvent<?>> PATH_EVENT_FILTER = we -> Path.class.equals(we.kind().type());
 
@@ -25,20 +26,23 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
 
     public DirectoryWatchService(Consumer<PathEvent> cb, Path base, Path... subDirs) throws IOException {
         callback = cb
-                .andThen(we -> lgr.log(System.Logger.Level.DEBUG, () -> we.dir.resolve(we.event.context()) + ", " + we.event.kind()));
+                .andThen(we -> lgr.log(
+                                System.Logger.Level.DEBUG,
+                                () -> we.dir.resolve(we.event.context()) + ", " + we.event.kind()
+                        )
+                );
         watchService = FileSystems.getDefault().newWatchService();
         keyPathMap = Arrays.stream(subDirs)
                 .map(base::resolve)
-                .collect(toMap(d -> createModifyKey(d, watchService), identity()));
-        keyPathMap.put(createModifyKey(base, watchService), base);
+                .collect(toMap(d -> watchKeyFor(d, watchService), identity()));
+        keyPathMap.put(watchKeyFor(base, watchService), base);
     }
 
-    private static WatchKey createModifyKey(Path p, WatchService ws) {
+    private static WatchKey watchKeyFor(Path p, WatchService ws) {
         try {
             return p.register(ws, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE);
-        }
-        catch (IOException ioex) {
-            throw new RuntimeException(ioex);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -54,28 +58,28 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
                 key.pollEvents()
                         .stream()
                         .filter(PATH_EVENT_FILTER)
-                        .map(we->new PathEvent(keyPathMap.get(key),  cast(we)))
+                        .map(we -> new PathEvent(keyPathMap.get(key), cast(we)))
                         .forEach(callback);
 
                 // reset; dir otherwise invalid
                 // stop if last key has been removed
-                if(!key.reset()) {
+                if (!key.reset()) {
                     keyPathMap.remove(key);
-                    if(keyPathMap.isEmpty()) {
+                    if (keyPathMap.isEmpty()) {
                         runnable = false;
                     }
                 }
-            }
-            catch (InterruptedException e) {
+            } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 runnable = false;
             }
         }
-        while(runnable);
+        while (runnable);
     }
+
     @SuppressWarnings("unchecked")
     private static WatchEvent<Path> cast(WatchEvent<?> we) {
-        return (WatchEvent<Path>)we;
+        return (WatchEvent<Path>) we;
     }
 
     @Override
@@ -84,18 +88,15 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
     }
 
     /**
-     * Start watch service as daemon thread.
-     * @param cb callback implemented as {@link Consumer} of {@link PathEvent}s
-     * @param base the base directory
+     * Start watch service as virtual thread.
+     *
+     * @param cb      callback implemented as {@link Consumer} of {@link PathEvent}s
+     * @param base    the base directory
      * @param subDirs a list of subdirectory paths relative to the base directory
-     * @throws IOException will be rethrown from {@link FileSystems} methods
      * @return the thread started as daemon thread
+     * @throws IOException will be rethrown from {@link FileSystems} methods
      */
     public static Thread startService(Consumer<PathEvent> cb, Path base, Path... subDirs) throws IOException {
-        var ws = new DirectoryWatchService(cb, base, subDirs);
-        var t = new Thread(ws);
-        t.setDaemon(true);
-        t.start();
-        return t;
+        return Thread.startVirtualThread(new DirectoryWatchService(cb, base, subDirs));
     }
 }
