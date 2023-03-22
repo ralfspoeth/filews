@@ -2,14 +2,16 @@ package com.pd.spr.filews;
 
 import java.io.IOException;
 import java.nio.file.*;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import static java.nio.file.StandardWatchEventKinds.*;
+import static java.util.Arrays.stream;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Stream.concat;
 
 
 public class DirectoryWatchService implements Runnable, AutoCloseable {
@@ -27,18 +29,16 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
         callback = cb
                 .andThen(we -> lgr.log(System.Logger.Level.DEBUG, () -> we.dir.resolve(we.event.context()) + ", " + we.event.kind()));
         watchService = FileSystems.getDefault().newWatchService();
-        keyPathMap = Arrays.stream(subDirs)
-                .map(base::resolve)
+        keyPathMap = concat(stream(subDirs).map(base::resolve), Stream.of(base))
                 .collect(toMap(d -> createModifyKey(d, watchService), identity()));
-        keyPathMap.put(createModifyKey(base, watchService), base);
     }
 
     private static WatchKey createModifyKey(Path p, WatchService ws) {
         try {
             return p.register(ws, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE);
         }
-        catch (IOException ioex) {
-            throw new RuntimeException(ioex);
+        catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
