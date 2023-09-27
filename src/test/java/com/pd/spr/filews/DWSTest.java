@@ -76,9 +76,9 @@ public class DWSTest {
     @Test
     public void testmulti() throws IOException, InterruptedException {
         var td = Path.of(getProperty("user.home")).resolve("td");
-        Files.createDirectory(td);
-        Files.createDirectory(td.resolve("a"));
-        Files.createDirectory(td.resolve("b"));
+        Files.createDirectories(td);
+        Files.createDirectories(td.resolve("a"));
+        Files.createDirectories(td.resolve("b"));
         DirectoryWatchService.startService(pe -> out.printf("Event %s, Folder %s, Local File %s, abs. file %s, parent %s%n",
                 pe.dir(), pe.event().context(),
                 pe.dir().resolve(pe.event().context()),
