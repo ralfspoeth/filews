@@ -4,6 +4,7 @@ package com.pd.spr.filews;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -74,12 +75,16 @@ public class DWSTest {
 
     @Test
     public void testmulti() throws IOException, InterruptedException {
+        var td = Path.of(getProperty("user.home")).resolve("td");
+        Files.createDirectory(td);
+        Files.createDirectory(td.resolve("a"));
+        Files.createDirectory(td.resolve("b"));
         DirectoryWatchService.startService(pe -> out.printf("Event %s, Folder %s, Local File %s, abs. file %s, parent %s%n",
                 pe.dir(), pe.event().context(),
                 pe.dir().resolve(pe.event().context()),
                 StreamSupport.stream(pe.dir().resolve(pe.event().context()).spliterator(), false).toList(),
                 pe.event().kind().name()
-        ), Path.of(getProperty("user.home"), "td"), Path.of("a"), Path.of("b"));
+        ), td, Path.of("a"), Path.of("b"));
         Thread.sleep(Duration.ofSeconds(20));
     }
 }
