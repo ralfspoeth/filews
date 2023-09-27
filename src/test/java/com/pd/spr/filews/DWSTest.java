@@ -4,10 +4,10 @@ package com.pd.spr.filews;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,7 +48,7 @@ public class DWSTest {
     private static void checkFile(DirectoryWatchService.PathEvent wep) {
         out.println("from checkFile");
         var p = wep.dir().resolve(wep.event().context());
-        long calls = paths.compute(p, (k, v)->v==null? 0L :v+1);
+        long calls = paths.compute(p, (_, v)->v==null? 0L :v+1);
         if(calls==0) {
             Thread.startVirtualThread(()->{
                 var f = p.toFile();
@@ -86,5 +86,8 @@ public class DWSTest {
                 pe.event().kind().name()
         ), td, Path.of("a"), Path.of("b"));
         Thread.sleep(Duration.ofSeconds(20));
+        Files.walkFileTree(td, new SimpleFileVisitor<>(){
+            
+        });
     }
 }
