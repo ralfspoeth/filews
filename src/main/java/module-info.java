@@ -1,5 +1,5 @@
-module com.pd.spr.filews {
-    exports com.pd.spr.filews;
+module com.github.ralfspoeth.filews {
+    exports com.github.ralfspoeth.filews;
     requires java.sql;
     uses java.sql.Driver;
 }

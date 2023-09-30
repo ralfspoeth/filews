@@ -1,13 +1,15 @@
-package com.pd.spr.filews;
+package com.github.ralfspoeth.filews;
 
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,7 +18,7 @@ import java.util.stream.StreamSupport;
 
 import static java.lang.System.*;
 
-public class DWSTest {
+public class DirectoryWatchServiceTest {
 
     private static Path tmpDir = null;
 
@@ -28,7 +30,7 @@ public class DWSTest {
 
     @Test
     public void testStatic() throws IOException, InterruptedException {
-        DirectoryWatchService.startService(DWSTest::checkFile, tmpDir);
+        DirectoryWatchService.startService(DirectoryWatchServiceTest::checkFile, tmpDir);
         out.println("Started");
         long msecs = 20_000;
         var f = tmpDir.resolve("demo.xml");
@@ -48,7 +50,7 @@ public class DWSTest {
     private static void checkFile(DirectoryWatchService.PathEvent wep) {
         out.println("from checkFile");
         var p = wep.dir().resolve(wep.event().context());
-        long calls = paths.compute(p, (_, v)->v==null? 0L :v+1);
+        long calls = paths.compute(p, (ignore, v)->v==null? 0L :v+1);
         if(calls==0) {
             Thread.startVirtualThread(()->{
                 var f = p.toFile();
@@ -87,7 +89,22 @@ public class DWSTest {
         ), td, Path.of("a"), Path.of("b"));
         Thread.sleep(Duration.ofSeconds(20));
         Files.walkFileTree(td, new SimpleFileVisitor<>(){
-            
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                if(exc==null) {
+                    Files.delete(dir);
+                    return FileVisitResult.CONTINUE;
+                }
+                else {
+                    throw exc;
+                }
+            }
         });
     }
 }

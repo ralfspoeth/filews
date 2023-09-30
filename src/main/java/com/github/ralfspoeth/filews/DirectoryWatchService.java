@@ -1,4 +1,4 @@
-package com.pd.spr.filews;
+package com.github.ralfspoeth.filews;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -9,7 +9,6 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static java.nio.file.StandardWatchEventKinds.*;
-import static java.util.Arrays.stream;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Stream.concat;
