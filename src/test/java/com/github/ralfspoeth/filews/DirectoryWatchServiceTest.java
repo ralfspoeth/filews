@@ -47,7 +47,7 @@ public class DirectoryWatchServiceTest {
     }
 
     private static final ConcurrentMap<Path, Long> paths = new ConcurrentHashMap<>();
-    private static void checkFile(DirectoryWatchService.PathEvent wep) {
+    private static void checkFile(PathEvent wep) {
         out.println("from checkFile");
         var p = wep.dir().resolve(wep.event().context());
         long calls = paths.compute(p, (ignore, v)->v==null? 0L :v+1);
@@ -64,7 +64,7 @@ public class DirectoryWatchServiceTest {
         }
     }
 
-    private static void logWatchEvent(DirectoryWatchService.PathEvent wep) {
+    private static void logWatchEvent(PathEvent wep) {
         out.printf("[%s] Watched %d events in %s with kind %s of type %s%n",
                 LocalDateTime.now(),
                 wep.event().count(),

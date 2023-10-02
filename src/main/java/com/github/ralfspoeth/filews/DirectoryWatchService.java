@@ -16,10 +16,7 @@ import static java.util.stream.Stream.concat;
 
 public class DirectoryWatchService implements Runnable, AutoCloseable {
 
-    public record PathEvent(Path dir, WatchEvent<Path> event) {
-    }
-
-    public static final Predicate<WatchEvent<?>> PATH_EVENT_FILTER = we -> Path.class.equals(we.kind().type());
+    private static final Predicate<WatchEvent<?>> PATH_EVENT_FILTER = we -> Path.class.equals(we.kind().type());
 
     private final WatchService watchService;
     private final Map<WatchKey, Path> keyPathMap;
@@ -28,9 +25,9 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
 
     public DirectoryWatchService(Consumer<PathEvent> cb, Path base, Path... subDirs) throws IOException {
         callback = cb
-                .andThen(we -> lgr.log(
+                .andThen(pe -> lgr.log(
                                 System.Logger.Level.DEBUG,
-                                () -> we.dir.resolve(we.event.context()) + ", " + we.event.kind()
+                                () -> pe.dir().resolve(pe.event().context()) + ", " + pe.event().kind()
                         )
                 );
         watchService = FileSystems.getDefault().newWatchService();
