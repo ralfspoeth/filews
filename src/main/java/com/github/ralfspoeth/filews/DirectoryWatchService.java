@@ -5,7 +5,6 @@ import java.nio.file.*;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static java.nio.file.StandardWatchEventKinds.*;
@@ -15,8 +14,6 @@ import static java.util.stream.Stream.concat;
 
 
 public class DirectoryWatchService implements Runnable, AutoCloseable {
-
-    private static final Predicate<WatchEvent<?>> PATH_EVENT_FILTER = we -> Path.class.equals(we.kind().type());
 
     private final WatchService watchService;
     private final Map<WatchKey, Path> keyPathMap;
@@ -43,9 +40,10 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
         }
     }
 
+    private volatile boolean runnable = true;
+
     @Override
     public void run() {
-        boolean runnable = true;
         do {
             try {
                 // waits for the next available key
@@ -54,7 +52,7 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
                 // may consist of multiple events
                 key.pollEvents()
                         .stream()
-                        .filter(PATH_EVENT_FILTER)
+                        .filter(we -> Path.class.equals(we.kind().type()))
                         .map(we -> new PathEvent(keyPathMap.get(key), cast(we)))
                         .forEach(callback);
 
@@ -72,6 +70,10 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
             }
         }
         while (runnable);
+    }
+
+    public void stopWatching() {
+        runnable = false;
     }
 
     @SuppressWarnings("unchecked")

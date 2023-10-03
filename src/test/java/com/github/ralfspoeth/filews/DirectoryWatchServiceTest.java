@@ -12,6 +12,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Spliterators;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.StreamSupport;
@@ -77,17 +78,25 @@ public class DirectoryWatchServiceTest {
 
     @Test
     public void testmulti() throws IOException, InterruptedException {
-        var td = Path.of(getProperty("user.home")).resolve("td");
+        Path td = Path.of(getProperty("user.home")).resolve("td"), a, b;
         Files.createDirectories(td);
         Files.createDirectories(td.resolve("a"));
         Files.createDirectories(td.resolve("b"));
-        DirectoryWatchService.startService(pe -> out.printf("Event %s, Folder %s, Local File %s, abs. file %s, parent %s%n",
+        var ds = new DirectoryWatchService(pe -> out.printf(
+                "Event %s, Folder %s, Local File %s, abs. file %s, parent %s%n",
                 pe.dir(), pe.event().context(),
                 pe.dir().resolve(pe.event().context()),
                 StreamSupport.stream(pe.dir().resolve(pe.event().context()).spliterator(), false).toList(),
                 pe.event().kind().name()
-        ), td, Path.of("a"), Path.of("b"));
-        Thread.sleep(Duration.ofSeconds(20));
+        ), td, a = Path.of("a"), b = Path.of("b"));
+        var t = new Thread(ds);
+        t.start();
+        Thread.sleep(Duration.ofMillis(500));
+        Files.createFile(td.resolve(a).resolve("one.txt"));
+        Files.move(td.resolve(a).resolve("one.txt"), td.resolve(b).resolve("two.txt"));
+        Files.delete(td.resolve(b).resolve("two.txt"));
+        ds.stopWatching();
+        t.interrupt();
         Files.walkFileTree(td, new SimpleFileVisitor<>(){
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
@@ -106,5 +115,6 @@ public class DirectoryWatchServiceTest {
                 }
             }
         });
+        t.join();
     }
 }
