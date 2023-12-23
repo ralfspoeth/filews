@@ -1,4 +1,4 @@
-package com.github.ralfspoeth.filews;
+package io.github.ralfspoeth.filews;
 
 
 import org.junit.jupiter.api.BeforeAll;
@@ -12,7 +12,6 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Spliterators;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.StreamSupport;

@@ -1,3 +1,3 @@
-module com.github.ralfspoeth.filews {
-    exports com.github.ralfspoeth.filews;
+module io.github.ralfspoeth.filews {
+    exports io.github.ralfspoeth.filews;
 }

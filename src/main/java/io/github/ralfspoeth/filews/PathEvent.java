@@ -1,4 +1,4 @@
-package com.github.ralfspoeth.filews;
+package io.github.ralfspoeth.filews;
 
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
