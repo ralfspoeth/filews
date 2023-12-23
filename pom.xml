@@ -12,11 +12,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.plugin.validation>VERBOSE</maven.plugin.validation>
     </properties>
-    <name>Basic Data Structures and Functions</name>
+    <name>Directory Watch Service</name>
     <description>
-        This project implements some basic data structures
-        missing in terms of purity in the Java libraries, and some
-        useful functions and predicates.
+        Implements a convenient way to watch entries in a directory.
     </description>
     <scm>
         <url>scm:git:https://github.com/ralfspoeth/filews</url>
@@ -107,9 +105,8 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>3.1.2</version>
                 <configuration>
-                    <argLine>--enable-preview</argLine>
                     <enableAssertions>true</enableAssertions>
                 </configuration>
             </plugin>
