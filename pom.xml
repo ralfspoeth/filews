@@ -5,6 +5,8 @@
     <groupId>io.github.ralfspoeth</groupId>
     <artifactId>filews</artifactId>
     <version>0.2-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <url>https://github.com/ralfspoeth/filews</url>
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
