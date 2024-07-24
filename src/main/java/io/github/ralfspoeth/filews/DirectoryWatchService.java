@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -44,32 +45,34 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
 
     @Override
     public void run() {
-        do {
-            try {
-                // waits for the next available key
-                var key = watchService.take();
+        try (var execService = Executors.newVirtualThreadPerTaskExecutor()) {
+            do {
+                try {
+                    // waits for the next available key
+                    var key = watchService.take();
 
-                // may consist of multiple events
-                key.pollEvents()
-                        .stream()
-                        .filter(we -> Path.class.equals(we.kind().type()))
-                        .map(we -> new PathEvent(keyPathMap.get(key), cast(we)))
-                        .forEach(callback);
+                    // may consist of multiple events
+                    key.pollEvents()
+                            .stream()
+                            .filter(we -> Path.class.equals(we.kind().type()))
+                            .map(we -> new PathEvent(keyPathMap.get(key), cast(we)))
+                            .forEach(pe -> execService.submit(() -> callback.accept(pe)));
 
-                // reset; dir otherwise invalid
-                // stop if last key has been removed
-                if (!key.reset()) {
-                    keyPathMap.remove(key);
-                    if (keyPathMap.isEmpty()) {
-                        runnable = false;
+                    // reset; dir otherwise invalid
+                    // stop if last key has been removed
+                    if (!key.reset()) {
+                        keyPathMap.remove(key);
+                        if (keyPathMap.isEmpty()) {
+                            runnable = false;
+                        }
                     }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    runnable = false;
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                runnable = false;
             }
+            while (runnable);
         }
-        while (runnable);
     }
 
     public void stopWatching() {

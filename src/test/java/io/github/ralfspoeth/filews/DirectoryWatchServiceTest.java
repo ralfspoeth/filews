@@ -18,7 +18,7 @@ import java.util.stream.StreamSupport;
 
 import static java.lang.System.*;
 
-public class DirectoryWatchServiceTest {
+class DirectoryWatchServiceTest {
 
     private static Path tmpDir = null;
 
@@ -29,7 +29,7 @@ public class DirectoryWatchServiceTest {
     }
 
     @Test
-    public void testStatic() throws IOException, InterruptedException {
+    void testStatic() throws IOException, InterruptedException {
         DirectoryWatchService.startService(DirectoryWatchServiceTest::checkFile, tmpDir);
         out.println("Started");
         long msecs = 20_000;
@@ -76,20 +76,19 @@ public class DirectoryWatchServiceTest {
 
 
     @Test
-    public void testmulti() throws IOException, InterruptedException {
-        Path td = Path.of(getProperty("user.home")).resolve("td"), a, b;
+    void testmulti() throws IOException, InterruptedException {
+        Path td = Path.of(getProperty("user.home")).resolve("td"), a = Path.of("a"), b = Path.of("b");
         Files.createDirectories(td);
         Files.createDirectories(td.resolve("a"));
         Files.createDirectories(td.resolve("b"));
         var ds = new DirectoryWatchService(pe -> out.printf(
-                "Event %s, Folder %s, Local File %s, abs. file %s, parent %s%n",
+                "Event dir: %s, event context: %s, context relative to dir: %s, path elements: %s, event-kind-name: %s%n",
                 pe.dir(), pe.event().context(),
                 pe.dir().resolve(pe.event().context()),
                 StreamSupport.stream(pe.dir().resolve(pe.event().context()).spliterator(), false).toList(),
                 pe.event().kind().name()
-        ), td, a = Path.of("a"), b = Path.of("b"));
-        var t = new Thread(ds);
-        t.start();
+        ), td, a, b);
+        var t = Thread.ofVirtual().start(ds);
         Thread.sleep(Duration.ofMillis(500));
         Files.createFile(td.resolve(a).resolve("one.txt"));
         Files.move(td.resolve(a).resolve("one.txt"), td.resolve(b).resolve("two.txt"));
