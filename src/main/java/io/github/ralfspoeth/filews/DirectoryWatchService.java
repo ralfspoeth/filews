@@ -2,16 +2,15 @@ package io.github.ralfspoeth.filews;
 
 import java.io.IOException;
 import java.nio.file.*;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
+import static java.lang.System.Logger.Level.DEBUG;
 import static java.nio.file.StandardWatchEventKinds.*;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Stream.concat;
 
 
 public class DirectoryWatchService implements Runnable, AutoCloseable {
@@ -19,18 +18,15 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
     private final WatchService watchService;
     private final Map<WatchKey, Path> keyPathMap;
     private final Consumer<PathEvent> callback;
-    private final System.Logger lgr = System.LoggerFinder.getLoggerFinder().getLogger(getClass().getName(), getClass().getModule());
 
-    public DirectoryWatchService(Consumer<PathEvent> cb, Path base, Path... subDirs) throws IOException {
-        callback = cb
-                .andThen(pe -> lgr.log(
-                                System.Logger.Level.DEBUG,
-                                () -> pe.dir().resolve(pe.event().context()) + ", " + pe.event().kind()
-                        )
-                );
+    public DirectoryWatchService(Consumer<PathEvent> cb, Collection<Path> paths) throws IOException {
+        callback = cb.andThen(DirectoryWatchService::logDebug);
         watchService = FileSystems.getDefault().newWatchService();
-        keyPathMap = concat(Stream.of(base), Arrays.stream(subDirs).map(base::resolve))
-                .collect(toMap(d -> watchKeyFor(d, watchService), identity()));
+        keyPathMap = paths.stream().collect(toMap(d -> watchKeyFor(d, watchService), identity()));
+    }
+
+    private static void logDebug(PathEvent pe) {
+        System.getLogger(DirectoryWatchService.class.getName()).log(DEBUG, () -> pe.path() + ", " + pe.event().kind());
     }
 
     private static WatchKey watchKeyFor(Path p, WatchService ws) {
@@ -93,12 +89,11 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
      * Start watch service as virtual thread.
      *
      * @param cb      callback implemented as {@link Consumer} of {@link PathEvent}s
-     * @param base    the base directory
-     * @param subDirs a list of subdirectory paths relative to the base directory
+     * @param paths a list of subdirectory paths relative to the base directory
      * @return the thread started as daemon thread
      * @throws IOException will be rethrown from {@link FileSystems} methods
      */
-    public static Thread startService(Consumer<PathEvent> cb, Path base, Path... subDirs) throws IOException {
-        return Thread.startVirtualThread(new DirectoryWatchService(cb, base, subDirs));
+    public static Thread startService(Consumer<PathEvent> cb, Collection<Path> paths) throws IOException {
+        return Thread.startVirtualThread(new DirectoryWatchService(cb, paths));
     }
 }

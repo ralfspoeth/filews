@@ -12,6 +12,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.StreamSupport;
@@ -30,9 +31,9 @@ class DirectoryWatchServiceTest {
 
     @Test
     void testStatic() throws IOException, InterruptedException {
-        DirectoryWatchService.startService(DirectoryWatchServiceTest::checkFile, tmpDir);
+        DirectoryWatchService.startService(DirectoryWatchServiceTest::checkFile, List.of(tmpDir));
         out.println("Started");
-        long msecs = 20_000;
+        long msecs = 2_000;
         var f = tmpDir.resolve("demo.xml");
         out.printf("File %s to be created%n", f);
         Files.createFile(f);
@@ -77,17 +78,16 @@ class DirectoryWatchServiceTest {
 
     @Test
     void testmulti() throws IOException, InterruptedException {
-        Path td = Path.of(getProperty("user.home")).resolve("td"), a = Path.of("a"), b = Path.of("b");
-        Files.createDirectories(td);
-        Files.createDirectories(td.resolve("a"));
-        Files.createDirectories(td.resolve("b"));
+        Path td = Files.createDirectories(Path.of(getProperty("user.home")).resolve("td"));
+        Path a = Files.createDirectories(td.resolve("a"));
+        Path b = Files.createDirectories(td.resolve("b"));
         var ds = new DirectoryWatchService(pe -> out.printf(
                 "Event dir: %s, event context: %s, context relative to dir: %s, path elements: %s, event-kind-name: %s%n",
                 pe.dir(), pe.event().context(),
                 pe.dir().resolve(pe.event().context()),
                 StreamSupport.stream(pe.dir().resolve(pe.event().context()).spliterator(), false).toList(),
                 pe.event().kind().name()
-        ), td, a, b);
+        ), List.of(td, a, b));
         var t = Thread.ofVirtual().start(ds);
         Thread.sleep(Duration.ofMillis(500));
         Files.createFile(td.resolve(a).resolve("one.txt"));
