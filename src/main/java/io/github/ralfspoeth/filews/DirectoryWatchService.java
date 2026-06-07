@@ -37,12 +37,11 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
         }
     }
 
-    private volatile boolean runnable = true;
-
     @Override
     public void run() {
+        // try-with-resources ensures all submitted callbacks complete before run() returns
         try (var execService = Executors.newVirtualThreadPerTaskExecutor()) {
-            do {
+            while (true) {
                 try {
                     // waits for the next available key
                     var key = watchService.take();
@@ -59,20 +58,17 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
                     if (!key.reset()) {
                         keyPathMap.remove(key);
                         if (keyPathMap.isEmpty()) {
-                            runnable = false;
+                            break;
                         }
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    runnable = false;
+                    break;
+                } catch (ClosedWatchServiceException e) {
+                    break;
                 }
             }
-            while (runnable);
         }
-    }
-
-    public void stopWatching() {
-        runnable = false;
     }
 
     @SuppressWarnings("unchecked")
@@ -89,8 +85,8 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
      * Start watch service as virtual thread.
      *
      * @param cb      callback implemented as {@link Consumer} of {@link PathEvent}s
-     * @param paths a list of subdirectory paths relative to the base directory
-     * @return the thread started as daemon thread
+     * @param paths   the directories to watch
+     * @return the virtual thread running the service
      * @throws IOException will be rethrown from {@link FileSystems} methods
      */
     public static Thread startService(Consumer<PathEvent> cb, Collection<Path> paths) throws IOException {

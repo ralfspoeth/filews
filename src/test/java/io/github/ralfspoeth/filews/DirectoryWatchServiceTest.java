@@ -15,9 +15,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.StreamSupport;
 
 import static java.lang.System.*;
+import static java.nio.file.StandardWatchEventKinds.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DirectoryWatchServiceTest {
 
@@ -31,20 +34,17 @@ class DirectoryWatchServiceTest {
 
     @Test
     void testStatic() throws IOException, InterruptedException {
-        DirectoryWatchService.startService(DirectoryWatchServiceTest::checkFile, List.of(tmpDir));
-        out.println("Started");
-        long msecs = 2_000;
+        var events = new CopyOnWriteArrayList<PathEvent>();
+        var _ = DirectoryWatchService.startService(events::add, List.of(tmpDir));
         var f = tmpDir.resolve("demo.xml");
-        out.printf("File %s to be created%n", f);
         Files.createFile(f);
-        out.printf("File %s created%n", f);
-        if(f.toFile().delete()) {
-            out.printf("File %s deleted%n", f);
-        } else {
-            err.printf("File %s could not be deleted%n", f);
-        }
-        Thread.sleep(msecs);
-        out.printf("Ende nach %d msec%n", msecs);
+        f.toFile().delete();
+        Thread.sleep(2_000);
+
+        assertTrue(events.stream().anyMatch(e -> e.path().equals(f) && e.event().kind() == ENTRY_CREATE),
+                "expected ENTRY_CREATE event for " + f);
+        assertTrue(events.stream().anyMatch(e -> e.path().equals(f) && e.event().kind() == ENTRY_DELETE),
+                "expected ENTRY_DELETE event for " + f);
     }
 
     private static final ConcurrentMap<Path, Long> paths = new ConcurrentHashMap<>();
@@ -57,7 +57,7 @@ class DirectoryWatchServiceTest {
                 var f = p.toFile();
                 long len = f.length();
                 long tmp;
-                while((tmp = f.length())>len) {
+                while((tmp = f.length())!=len) {
                     len = tmp;
                 }
                 out.printf("File %s%n", f);
@@ -93,7 +93,6 @@ class DirectoryWatchServiceTest {
         Files.createFile(td.resolve(a).resolve("one.txt"));
         Files.move(td.resolve(a).resolve("one.txt"), td.resolve(b).resolve("two.txt"));
         Files.delete(td.resolve(b).resolve("two.txt"));
-        ds.stopWatching();
         t.interrupt();
         Files.walkFileTree(td, new SimpleFileVisitor<>(){
             @Override
