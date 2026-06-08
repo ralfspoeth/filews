@@ -1,8 +1,10 @@
 package io.github.ralfspoeth.filews;
 
 
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -11,15 +13,15 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.StreamSupport;
 
-import static java.lang.System.*;
-import static java.nio.file.StandardWatchEventKinds.*;
+import static java.lang.System.getProperty;
+import static java.lang.System.out;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DirectoryWatchServiceTest {
@@ -33,49 +35,29 @@ class DirectoryWatchServiceTest {
     }
 
     @Test
+    @Timeout(10)
     void testStatic() throws IOException, InterruptedException {
-        var events = new CopyOnWriteArrayList<PathEvent>();
+        var events = new ConcurrentLinkedQueue<PathEvent>();
         var _ = DirectoryWatchService.startService(events::add, List.of(tmpDir));
         var f = tmpDir.resolve("demo.xml");
-        Files.createFile(f);
-        f.toFile().delete();
-        Thread.sleep(2_000);
-
-        assertTrue(events.stream().anyMatch(e -> e.path().equals(f) && e.event().kind() == ENTRY_CREATE),
-                "expected ENTRY_CREATE event for " + f);
-        assertTrue(events.stream().anyMatch(e -> e.path().equals(f) && e.event().kind() == ENTRY_DELETE),
-                "expected ENTRY_DELETE event for " + f);
-    }
-
-    private static final ConcurrentMap<Path, Long> paths = new ConcurrentHashMap<>();
-    private static void checkFile(PathEvent wep) {
-        out.println("from checkFile");
-        var p = wep.dir().resolve(wep.event().context());
-        long calls = paths.compute(p, (ignore, v)->v==null? 0L :v+1);
-        if(calls==0) {
-            Thread.startVirtualThread(()->{
-                var f = p.toFile();
-                long len = f.length();
-                long tmp;
-                while((tmp = f.length())!=len) {
-                    len = tmp;
-                }
-                out.printf("File %s%n", f);
-            });
+        var cf = Files.createFile(f);
+        while(events.isEmpty()) {
+            Thread.sleep(Duration.ofMillis(10));
         }
-    }
-
-    private static void logWatchEvent(PathEvent wep) {
-        out.printf("[%s] Watched %d events in %s with kind %s of type %s%n",
-                LocalDateTime.now(),
-                wep.event().count(),
-                wep.dir().resolve(wep.event().context()),
-                wep.event().kind().name(),
-                wep.event().kind().type()
+        Files.delete(cf);
+        while(events.size()<2) {
+            Thread.sleep(Duration.ofMillis(10));
+        }
+        assertAll(
+                () -> assertTrue(events.stream().anyMatch(e -> e.event().kind() == ENTRY_CREATE)),
+                () -> assertTrue(events.stream().anyMatch(e -> e.event().kind() == ENTRY_DELETE)),
+                () -> assertTrue(events.stream().allMatch(e -> e.path().endsWith("demo.xml")))
         );
     }
 
-
+    // Exploratory test: verifies that create, move, and delete events across multiple
+    // watched directories produce console output without throwing exceptions.
+    // No assertions — correctness is checked by inspection of the printed output.
     @Test
     void testmulti() throws IOException, InterruptedException {
         Path td = Files.createDirectories(Path.of(getProperty("user.home")).resolve("td"));
@@ -94,7 +76,7 @@ class DirectoryWatchServiceTest {
         Files.move(td.resolve(a).resolve("one.txt"), td.resolve(b).resolve("two.txt"));
         Files.delete(td.resolve(b).resolve("two.txt"));
         t.interrupt();
-        Files.walkFileTree(td, new SimpleFileVisitor<>(){
+        Files.walkFileTree(td, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 Files.delete(file);
@@ -102,12 +84,11 @@ class DirectoryWatchServiceTest {
             }
 
             @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                if(exc==null) {
+            public FileVisitResult postVisitDirectory(@NonNull Path dir, IOException exc) throws IOException {
+                if (exc == null) {
                     Files.delete(dir);
                     return FileVisitResult.CONTINUE;
-                }
-                else {
+                } else {
                     throw exc;
                 }
             }
