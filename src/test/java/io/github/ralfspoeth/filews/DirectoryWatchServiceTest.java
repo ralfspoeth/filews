@@ -2,6 +2,7 @@ package io.github.ralfspoeth.filews;
 
 
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -78,13 +79,13 @@ class DirectoryWatchServiceTest {
         t.interrupt();
         Files.walkFileTree(td, new SimpleFileVisitor<>() {
             @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+            public @NonNull FileVisitResult visitFile(@NonNull Path file, @NonNull BasicFileAttributes attrs) throws IOException {
                 Files.delete(file);
                 return FileVisitResult.CONTINUE;
             }
 
             @Override
-            public FileVisitResult postVisitDirectory(@NonNull Path dir, IOException exc) throws IOException {
+            public @NonNull FileVisitResult postVisitDirectory(@NonNull Path dir, @Nullable IOException exc) throws IOException {
                 if (exc == null) {
                     Files.delete(dir);
                     return FileVisitResult.CONTINUE;
