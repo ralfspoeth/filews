@@ -62,7 +62,7 @@ Stop by either interrupting the thread or calling `close()` on the service. Both
 <dependency>
     <groupId>io.github.ralfspoeth</groupId>
     <artifactId>filews</artifactId>
-    <version>0.2-SNAPSHOT</version>
+    <version>0.3</version>
 </dependency>
 ```
 
