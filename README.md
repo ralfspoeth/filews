@@ -4,7 +4,7 @@ A small Java library that wraps the JDK `WatchService` API into a simple, callba
 
 ## Requirements
 
-- Java 21+
+- Java 25+
 - No runtime dependencies
 
 ## Usage
@@ -38,9 +38,32 @@ thread.join();
 | Member | Description |
 |---|---|
 | `DirectoryWatchService(Consumer<PathEvent> cb, Collection<Path> paths)` | Creates a new instance watching the given directories. |
-| `void run()` | Starts the watch loop. Intended to run on a virtual thread. Blocks until interrupted, `close()` is called, or all watched directories become invalid. |
+| `DirectoryWatchService(Consumer<PathEvent> cb, Collection<Path> paths, Predicate<Path> autoRegister)` | As above, additionally watching directories created below a watched directory whenever `autoRegister` accepts them. |
+| `void register(Path dir)` | Starts watching a directory. May be called at any time, including from the callback. Idempotent. |
+| `void registerTree(Path root)` | Registers `root` plus every directory below it accepted by `autoRegister`. |
+| `boolean unregister(Path dir)` | Stops watching a directory; returns whether it had been watched. |
+| `Set<Path> watched()` | The directories currently watched. |
+| `void run()` | Starts the watch loop. Intended to run on a virtual thread. Blocks until interrupted or `close()` is called. |
 | `void close()` | Closes the underlying `WatchService`, unblocking `run()`. |
 | `static Thread startService(Consumer<PathEvent> cb, Collection<Path> paths)` | Convenience factory: creates a service and starts it on a virtual thread. |
+| `static Thread startService(Consumer<PathEvent> cb, Collection<Path> paths, Predicate<Path> autoRegister)` | As above, with automatic registration of new subdirectories. |
+| `static final Predicate<Path> NONE` | The default `autoRegister`: never register anything automatically. |
+
+### Automatic registration
+
+`autoRegister` is a predicate rather than a flag so that it can express exclusions. Watching a tree wholesale is rarely
+what you want — a blanket "watch everything below" also picks up output, archive and temp directories, and those grow
+without bound.
+
+```java
+// only directories named "in", exactly two levels below root
+Predicate<Path> onlyInboxes = dir ->
+        dir.getFileName().toString().equals("in") && dir.getParent().getParent().equals(root);
+```
+
+A directory moved in complete with content produces a single `ENTRY_CREATE` for its top level and no events at all for
+what is inside it, so a newly created directory is walked with `registerTree`, not merely registered. Even so, a file
+arriving *during* that walk can be missed: watch events reduce latency, but only a periodic scan is a guarantee.
 
 ### `PathEvent`
 
