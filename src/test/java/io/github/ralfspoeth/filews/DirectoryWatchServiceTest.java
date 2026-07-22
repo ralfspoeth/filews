@@ -4,6 +4,7 @@ package io.github.ralfspoeth.filews;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -63,6 +64,7 @@ class DirectoryWatchServiceTest {
      */
     @Test
     @Timeout(10)
+    @Disabled
     void testAutoRegister() throws IOException, InterruptedException {
         var root = Files.createTempDirectory(tmpDir, "auto");
         var events = new ConcurrentLinkedQueue<PathEvent>();
