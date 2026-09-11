@@ -4,9 +4,9 @@ package io.github.ralfspoeth.filews;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -29,9 +29,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DirectoryWatchServiceTest {
 
+    @TempDir
     private static Path tmpDir = null;
 
-    @BeforeAll
+    //@BeforeAll
     static void initTmpDir() throws IOException {
         tmpDir = Files.createTempDirectory(Path.of(getProperty("user.home")), "tmp");
         tmpDir.toFile().deleteOnExit();
@@ -64,7 +65,6 @@ class DirectoryWatchServiceTest {
      */
     @Test
     @Timeout(10)
-    @Disabled
     void testAutoRegister() throws IOException, InterruptedException {
         var root = Files.createTempDirectory(tmpDir, "auto");
         var events = new ConcurrentLinkedQueue<PathEvent>();

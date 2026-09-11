@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -44,6 +45,8 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
     private final Consumer<PathEvent> callback;
     private final Predicate<Path> autoRegister;
     private final boolean autoRegistering;
+    // paths passed explicitly at construction — always included in watched()
+    private final Set<Path> initialPaths;
 
     public DirectoryWatchService(Consumer<PathEvent> cb, Collection<Path> paths) throws IOException {
         this(cb, paths, NONE);
@@ -60,6 +63,7 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
         this.callback = cb.andThen(DirectoryWatchService::logDebug);
         this.autoRegister = autoRegister;
         this.autoRegistering = autoRegister != NONE;
+        this.initialPaths = Set.copyOf(paths);
         this.watchService = FileSystems.getDefault().newWatchService();
         for (var path : paths) {
             register(path);
@@ -114,10 +118,17 @@ public class DirectoryWatchService implements Runnable, AutoCloseable {
     }
 
     /**
-     * The directories currently watched.
+     * The directories currently reported as watched: those passed at construction
+     * plus any auto-registered directories accepted by the predicate. Intermediate
+     * directories registered solely to observe events inside them are excluded.
      */
     public Set<Path> watched() {
-        return Set.copyOf(watchKeys.keySet());
+        if (!autoRegistering) {
+            return Set.copyOf(watchKeys.keySet());
+        }
+        return watchKeys.keySet().stream()
+                .filter(p -> initialPaths.contains(p) || autoRegister.test(p))
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     private static void logDebug(PathEvent pe) {
