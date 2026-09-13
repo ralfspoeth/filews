@@ -3,7 +3,6 @@ package io.github.ralfspoeth.filews;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
@@ -19,7 +18,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.StreamSupport;
 
-import static java.lang.System.getProperty;
 import static java.lang.System.out;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
@@ -30,13 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class DirectoryWatchServiceTest {
 
     @TempDir
-    private static Path tmpDir = null;
-
-    //@BeforeAll
-    static void initTmpDir() throws IOException {
-        tmpDir = Files.createTempDirectory(Path.of(getProperty("user.home")), "tmp");
-        tmpDir.toFile().deleteOnExit();
-    }
+    private static Path tmpDir;
 
     @Test
     @Timeout(10)
@@ -134,7 +126,7 @@ class DirectoryWatchServiceTest {
     // No assertions — correctness is checked by inspection of the printed output.
     @Test
     void testmulti() throws IOException, InterruptedException {
-        Path td = Files.createDirectories(Path.of(getProperty("user.home")).resolve("td"));
+        Path td = Files.createTempDirectory(tmpDir, "multi");
         Path a = Files.createDirectories(td.resolve("a"));
         Path b = Files.createDirectories(td.resolve("b"));
         var ds = new DirectoryWatchService(pe -> out.printf(

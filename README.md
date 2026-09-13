@@ -40,9 +40,9 @@ thread.join();
 | `DirectoryWatchService(Consumer<PathEvent> cb, Collection<Path> paths)` | Creates a new instance watching the given directories. |
 | `DirectoryWatchService(Consumer<PathEvent> cb, Collection<Path> paths, Predicate<Path> autoRegister)` | As above, additionally watching directories created below a watched directory whenever `autoRegister` accepts them. |
 | `void register(Path dir)` | Starts watching a directory. May be called at any time, including from the callback. Idempotent. |
-| `void registerTree(Path root)` | Registers `root` plus every directory below it accepted by `autoRegister`. |
+| `void registerTree(Path root)` | Registers `root` at OS level and every directory below it accepted by `autoRegister`. |
 | `boolean unregister(Path dir)` | Stops watching a directory; returns whether it had been watched. |
-| `Set<Path> watched()` | The directories currently watched. |
+| `Set<Path> watched()` | The directories passed at construction plus any auto-registered ones accepted by the predicate. Intermediate directories registered at OS level solely to propagate events are excluded. |
 | `void run()` | Starts the watch loop. Intended to run on a virtual thread. Blocks until interrupted or `close()` is called. |
 | `void close()` | Closes the underlying `WatchService`, unblocking `run()`. |
 | `static Thread startService(Consumer<PathEvent> cb, Collection<Path> paths)` | Convenience factory: creates a service and starts it on a virtual thread. |
@@ -85,7 +85,7 @@ Stop by either interrupting the thread or calling `close()` on the service. Both
 <dependency>
     <groupId>io.github.ralfspoeth</groupId>
     <artifactId>filews</artifactId>
-    <version>0.3</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
